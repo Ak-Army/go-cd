@@ -86,7 +86,7 @@ func (w *PkgFinder) findExact(find string) *OrderedRanks{
 			if find == filepath.Join(components[x:]...) {
 				return &OrderedRanks{
 					{
-						Target: pkg,
+						Target: filepath.Join(w.gopath, pkg),
 					},
 				}
 			}
