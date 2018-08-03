@@ -1,7 +1,7 @@
 # gocd
 __Change directory to a Go package__
 
-A very simple command line application to automatically change directory based on a Go package name
+A very simple command line application to automatically change directory based on a Go package name.
 Inpirated by github.com/relvacode/gocd
 
 ## Install
