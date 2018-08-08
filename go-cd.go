@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"flag"
 )
 
 const VendorToken = "^"
@@ -45,7 +46,13 @@ func tryGoToVendorParent() {
 }
 
 func main() {
-	log.SetFlags(0)
+	verbose := flag.Bool("v", false, "URL of ratesheet server")
+	flag.Parse()
+
+	log.SetFlags(log.Llongfile)
+	if !*verbose {
+		log.SetFlags(0)
+	}
 
 	path, err := getGoPath()
 	if err != nil {
@@ -53,17 +60,12 @@ func main() {
 	}
 
 	// If no path supplied then change directory to GOPATH.
-	if len(os.Args) == 1 {
+	if flag.NArg() == 0 {
 		fmt.Print(path)
 		return
 	}
 
-	if os.Args[1] == "-h" {
-		fmt.Printf("go-cd version: %s build time: %s\n", Version, BuildTime)
-		return
-	}
-
-	if os.Args[1] == VendorToken {
+	if flag.Arg(0) == VendorToken {
 		tryGoToVendorParent()
 		return
 	}
@@ -72,7 +74,7 @@ func main() {
 		gopath: path,
 	}
 
-	matches := w.Find(os.Args[1])
+	matches := w.Find(flag.Arg(0))
 
 	if matches == nil {
 		log.Fatal("No matching package found")
@@ -83,10 +85,10 @@ func main() {
 		return
 	}
 
-	if len(os.Args) > 2 {
-		i, err := strconv.Atoi(os.Args[2])
+	if flag.NArg() > 1 {
+		i, err := strconv.Atoi(flag.Arg(1))
 		if err != nil {
-			log.Fatalf("cannot parse requested index %s: %s", os.Args[2], err)
+			log.Fatalf("cannot parse requested index %s: %s", flag.Arg(1), err)
 		}
 
 		if i > len(m) {
