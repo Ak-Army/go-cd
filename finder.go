@@ -12,7 +12,7 @@ import (
 	"io/ioutil"
 	"os/user"
 	"time"
-)
+	)
 
 type PkgFinder struct {
 	gopath    string
@@ -59,7 +59,7 @@ func (w *PkgFinder) walker() filepath.WalkFunc {
 			return filepath.SkipDir
 		}
 		// Ignore if path is a directory or is not a go file.
-		if i.IsDir() || !strings.HasSuffix(i.Name(), "go") {
+		if i.IsDir() {
 			return nil
 		}
 
@@ -79,20 +79,19 @@ func (w *PkgFinder) walker() filepath.WalkFunc {
 	}
 }
 
-func (w *PkgFinder) findExact(find string) *OrderedRanks{
+func (w *PkgFinder) findExact(find string) *OrderedRanks {
+	found := OrderedRanks{}
 	for pkg := range w.cache {
 		components := strings.Split(pkg, string(filepath.Separator))
 		for x := len(components) - 1; x >= 0; x-- {
 			if find == filepath.Join(components[x:]...) {
-				return &OrderedRanks{
-					{
-						Target: filepath.Join(w.gopath, pkg),
-					},
-				}
+				found = append(found, fuzzy.Rank{
+					Target: filepath.Join(w.gopath, pkg),
+				})
 			}
 		}
 	}
-	return nil
+	return &found
 }
 
 func (w *PkgFinder) findFuzzy(find string) *OrderedRanks {
