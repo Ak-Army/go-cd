@@ -21,13 +21,13 @@ type PkgFinder struct {
 }
 
 // Find a package by the given key
-func (w *PkgFinder) Find(find string) *OrderedRanks {
+func (w *PkgFinder) Find(find string) OrderedRanks {
 	w.loadCache()
 	defer w.storeCache()
 
 	filepath.Walk(w.gopath, w.walker())
 
-	if r := w.findExact(find); r!= nil {
+	if r := w.findExact(find); r.Len() > 0 {
 		return r
 	}
 
@@ -79,7 +79,7 @@ func (w *PkgFinder) walker() filepath.WalkFunc {
 	}
 }
 
-func (w *PkgFinder) findExact(find string) *OrderedRanks {
+func (w *PkgFinder) findExact(find string) OrderedRanks {
 	found := OrderedRanks{}
 	for pkg := range w.cache {
 		components := strings.Split(pkg, string(filepath.Separator))
@@ -91,10 +91,10 @@ func (w *PkgFinder) findExact(find string) *OrderedRanks {
 			}
 		}
 	}
-	return &found
+	return found
 }
 
-func (w *PkgFinder) findFuzzy(find string) *OrderedRanks {
+func (w *PkgFinder) findFuzzy(find string) OrderedRanks {
 	// Find possible matches from list of seen packages
 	found := OrderedRanks{}
 	for pkg := range w.cache {
@@ -112,7 +112,7 @@ func (w *PkgFinder) findFuzzy(find string) *OrderedRanks {
 
 	sort.Sort(found)
 
-	return &found
+	return found
 }
 
 type OrderedRanks []fuzzy.Rank

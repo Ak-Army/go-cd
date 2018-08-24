@@ -76,12 +76,11 @@ func main() {
 
 	matches := w.Find(flag.Arg(0))
 
-	if matches == nil {
+	if len(matches) == 0 {
 		log.Fatal("No matching package found")
 	}
-	m := *matches
-	if len(m) == 1 {
-		fmt.Println(m[0].Target)
+	if len(matches) == 1 {
+		fmt.Println(matches[0].Target)
 		return
 	}
 
@@ -91,15 +90,15 @@ func main() {
 			log.Fatalf("cannot parse requested index %s: %s", flag.Arg(1), err)
 		}
 
-		if i > len(m) {
+		if i > len(matches) {
 			log.Fatalf("%d is an invalid index (max %d)", i, len(m))
 		}
 
-		fmt.Println(m[i].Target)
+		fmt.Println(matches[i].Target)
 		return
 	}
 
-	for i, m := range m {
+	for i, m := range matches {
 		rel, _ := filepath.Rel(path, m.Target)
 		log.Printf("  %d %s\n", i, rel)
 	}
