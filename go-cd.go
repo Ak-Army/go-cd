@@ -1,14 +1,15 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"go/build"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"flag"
 )
 
 const VendorToken = "^"
@@ -52,7 +53,9 @@ func main() {
 	log.SetFlags(log.Llongfile)
 	if !*verbose {
 		log.SetFlags(0)
+		log.SetOutput(ioutil.Discard)
 	}
+	log.Printf("Version: %s build time: %s\n", Version, BuildTime)
 
 	path, err := getGoPath()
 	if err != nil {
@@ -69,15 +72,17 @@ func main() {
 		tryGoToVendorParent()
 		return
 	}
+	find(path)
+}
 
+func find(path string) {
 	w := PkgFinder{
 		gopath: path,
 	}
 
 	matches := w.Find(flag.Arg(0))
-
 	if len(matches) == 0 {
-		log.Fatal("No matching package found")
+		fmt.Println("No matching package found")
 	}
 	if len(matches) == 1 {
 		fmt.Println(matches[0].Target)
@@ -91,7 +96,7 @@ func main() {
 		}
 
 		if i > len(matches) {
-			log.Fatalf("%d is an invalid index (max %d)", i, len(m))
+			log.Fatalf("%d is an invalid index (max %d)", i, len(matches))
 		}
 
 		fmt.Println(matches[i].Target)
@@ -100,7 +105,6 @@ func main() {
 
 	for i, m := range matches {
 		rel, _ := filepath.Rel(path, m.Target)
-		log.Printf("  %d %s\n", i, rel)
+		fmt.Printf("  %d %s\n", i, rel)
 	}
-	os.Exit(1)
 }

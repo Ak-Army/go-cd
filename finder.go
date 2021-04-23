@@ -1,18 +1,18 @@
 package main
 
 import (
+	"encoding/json"
+	"io/ioutil"
+	"log"
 	"os"
+	"os/user"
 	"path/filepath"
 	"sort"
 	"strings"
-
-	"encoding/json"
-	"fmt"
-	"github.com/renstrom/fuzzysearch/fuzzy"
-	"io/ioutil"
-	"os/user"
 	"time"
-	)
+
+	"github.com/renstrom/fuzzysearch/fuzzy"
+)
 
 type PkgFinder struct {
 	gopath    string
@@ -37,7 +37,7 @@ func (w *PkgFinder) Find(find string) OrderedRanks {
 func (w *PkgFinder) loadCache() {
 	w.cache = make(map[string]time.Time)
 	usr, _ := user.Current()
-	w.cachePath = fmt.Sprintf("%s/.gocd", usr.HomeDir)
+	w.cachePath = filepath.Join(usr.HomeDir, ".gocd")
 
 	cache, _ := ioutil.ReadFile(w.cachePath)
 	json.Unmarshal(cache, &w.cache)
@@ -54,27 +54,28 @@ func (w *PkgFinder) walker() filepath.WalkFunc {
 		if path == w.gopath {
 			return nil
 		}
-		// Skip if path contains .,_ or vendor
-		if i.IsDir() && (strings.HasPrefix(i.Name(), ".") || strings.HasPrefix(i.Name(), "_") || strings.Contains(path, "vendor")) {
-			return filepath.SkipDir
-		}
-		// Ignore if path is a directory or is not a go file.
-		if i.IsDir() {
+		if !i.IsDir() {
 			return nil
 		}
 
-		// Scan every component of the relative path until we find a direct match.
+		// Skip if path prefixed with .,_ or vendor
+		if strings.HasPrefix(i.Name(), ".") || strings.HasPrefix(i.Name(), "_") || strings.Contains(path, "vendor") {
+			return nil
+		}
+
 		pkg, _ := filepath.Rel(w.gopath, filepath.Dir(path))
 		ppp := strings.Split(pkg, string(filepath.Separator))
-		if len(ppp) > 3 {
+		if len(ppp) > 2 {
 			return filepath.SkipDir
 		}
-		if cached, ok := w.cache[pkg]; ok {
-			if cached.Sub(i.ModTime()) < 0 {
+		pkgName := filepath.Join(pkg, i.Name())
+		if cached, ok := w.cache[pkgName]; ok {
+			if len(ppp) > 1 && cached.Sub(i.ModTime()) <= 0 {
+				log.Println("Skip dir: ", path, i.ModTime(), cached)
 				return filepath.SkipDir
 			}
 		}
-		w.cache[pkg] = i.ModTime()
+		w.cache[pkgName] = i.ModTime()
 		return nil
 	}
 }
@@ -84,7 +85,7 @@ func (w *PkgFinder) findExact(find string) OrderedRanks {
 	for pkg := range w.cache {
 		components := strings.Split(pkg, string(filepath.Separator))
 		for x := len(components) - 1; x >= 0; x-- {
-			if find == filepath.Join(components[x:]...) {
+			if find == components[x] {
 				found = append(found, fuzzy.Rank{
 					Target: filepath.Join(w.gopath, pkg),
 				})
@@ -111,7 +112,18 @@ func (w *PkgFinder) findFuzzy(find string) OrderedRanks {
 	}
 
 	sort.Sort(found)
-
+	var first fuzzy.Rank
+	allSame := true
+	for i, pkg := range found {
+		if i == 0 {
+			first = pkg
+		} else if !strings.HasPrefix(pkg.Target, first.Target) {
+			allSame = false
+		}
+	}
+	if allSame {
+		return OrderedRanks{first}
+	}
 	return found
 }
 

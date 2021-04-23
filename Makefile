@@ -39,7 +39,7 @@ full-test:
 	lll -g -l 140
 	interfacer ${LIST_OF_FILES}
 	gofmt -l -s .
-	gocyclo -over 15 -avg .
+	gocyclo -over 10 -avg .
 	goconst -min-occurrences 3 -min-length 3 -ignore-tests .
 
 .PHONY: init build test full-test
